@@ -13,6 +13,7 @@ final class QuotaViewModel {
     let proxyManager: CLIProxyManager
     private var apiClient: ManagementAPIClient?
     private let antigravityFetcher = AntigravityQuotaFetcher()
+    private let openAIFetcher = OpenAIQuotaFetcher()
     
     var currentPage: NavigationPage = .dashboard
     var authFiles: [AuthFile] = []
@@ -102,6 +103,9 @@ final class QuotaViewModel {
         }
     }
     
+    private var lastQuotaRefresh: Date?
+    private let quotaRefreshInterval: TimeInterval = 60
+    
     func refreshData() async {
         guard let client = apiClient else { return }
         
@@ -112,14 +116,46 @@ final class QuotaViewModel {
             self.authFiles = try await files
             self.usageStats = try await stats
             
-            Task {
-                await refreshAntigravityQuotas()
+            let shouldRefreshQuotas = lastQuotaRefresh == nil || 
+                Date().timeIntervalSince(lastQuotaRefresh!) >= quotaRefreshInterval
+            
+            if shouldRefreshQuotas && !isLoadingQuotas {
+                Task {
+                    await refreshAllQuotas()
+                }
             }
         } catch {
             if !Task.isCancelled {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+    
+    func refreshAllQuotas() async {
+        guard !isLoadingQuotas else { return }
+        
+        isLoadingQuotas = true
+        lastQuotaRefresh = Date()
+        
+        async let antigravity: () = refreshAntigravityQuotasInternal()
+        async let openai: () = refreshOpenAIQuotasInternal()
+        
+        _ = await (antigravity, openai)
+        
+        isLoadingQuotas = false
+    }
+    
+    private func refreshAntigravityQuotasInternal() async {
+        let quotas = await antigravityFetcher.fetchAllAntigravityQuotas()
+        providerQuotas[.antigravity] = quotas
+        
+        let subscriptions = await antigravityFetcher.fetchAllSubscriptionInfo()
+        subscriptionInfos = subscriptions
+    }
+    
+    private func refreshOpenAIQuotasInternal() async {
+        let quotas = await openAIFetcher.fetchAllCodexQuotas()
+        providerQuotas[.codex] = quotas
     }
     
     func refreshAntigravityQuotas() async {
@@ -132,6 +168,11 @@ final class QuotaViewModel {
         subscriptionInfos = subscriptions
         
         isLoadingQuotas = false
+    }
+    
+    func refreshOpenAIQuotas() async {
+        let quotas = await openAIFetcher.fetchAllCodexQuotas()
+        providerQuotas[.codex] = quotas
     }
     
     func getQuotaForAccount(provider: AIProvider, email: String) -> ProviderQuotaData? {

@@ -9,15 +9,20 @@ struct MenuBarView: View {
     @Environment(QuotaViewModel.self) private var viewModel
     @Environment(\.openWindow) private var openWindow
     
-    private var antigravityQuotas: [(email: String, data: ProviderQuotaData)] {
-        guard let quotas = viewModel.providerQuotas[.antigravity] else { return [] }
-        return quotas.map { (email: $0.key, data: $0.value) }
-            .filter { !$0.data.models.isEmpty }
-            .sorted { $0.email < $1.email }
+    private var allQuotas: [(provider: AIProvider, email: String, data: ProviderQuotaData)] {
+        var result: [(provider: AIProvider, email: String, data: ProviderQuotaData)] = []
+        
+        for (provider, quotas) in viewModel.providerQuotas {
+            for (email, data) in quotas where !data.models.isEmpty {
+                result.append((provider: provider, email: email, data: data))
+            }
+        }
+        
+        return result.sorted { $0.provider.displayName < $1.provider.displayName }
     }
     
     private var hasQuotaData: Bool {
-        !antigravityQuotas.isEmpty
+        !allQuotas.isEmpty
     }
     
     var body: some View {
@@ -170,13 +175,13 @@ struct MenuBarView: View {
                 }
             }
             
-            ForEach(antigravityQuotas.prefix(3), id: \.email) { item in
-                QuotaAccountRow(email: item.email, data: item.data)
+            ForEach(allQuotas.prefix(4), id: \.email) { item in
+                QuotaAccountRow(provider: item.provider, email: item.email, data: item.data)
             }
             
-            if antigravityQuotas.count > 3 {
+            if allQuotas.count > 4 {
                 Text("menubar.andMore".localized()
-                    .replacingOccurrences(of: "{count}", with: "\(antigravityQuotas.count - 3)"))
+                    .replacingOccurrences(of: "{count}", with: "\(allQuotas.count - 4)"))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -361,6 +366,7 @@ private struct ProviderRow: View {
 }
 
 private struct QuotaAccountRow: View {
+    let provider: AIProvider
     let email: String
     let data: ProviderQuotaData
     
@@ -378,7 +384,9 @@ private struct QuotaAccountRow: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(spacing: 6) {
+                ProviderIcon(provider: provider, size: 14)
+                
                 Text(email)
                     .font(.caption)
                     .fontWeight(.medium)
@@ -387,7 +395,7 @@ private struct QuotaAccountRow: View {
                 Spacer()
                 
                 if data.isForbidden {
-                    Text("Forbidden")
+                    Text("Limit")
                         .font(.caption2)
                         .foregroundStyle(.red)
                 }

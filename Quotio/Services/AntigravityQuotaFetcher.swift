@@ -24,6 +24,8 @@ struct ModelQuota: Codable, Identifiable, Sendable {
         case "gemini-3-flash": return "Gemini Flash"
         case "gemini-3-pro-image": return "Gemini Image"
         case "claude-sonnet-4-5-thinking": return "Claude 4.5"
+        case "codex-session": return "Session"
+        case "codex-weekly": return "Weekly"
         default: return name
         }
     }
@@ -66,11 +68,25 @@ struct ProviderQuotaData: Codable, Sendable {
     var models: [ModelQuota]
     var lastUpdated: Date
     var isForbidden: Bool
+    var planType: String?
     
-    init(models: [ModelQuota] = [], lastUpdated: Date = Date(), isForbidden: Bool = false) {
+    init(models: [ModelQuota] = [], lastUpdated: Date = Date(), isForbidden: Bool = false, planType: String? = nil) {
         self.models = models
         self.lastUpdated = lastUpdated
         self.isForbidden = isForbidden
+        self.planType = planType
+    }
+    
+    var planDisplayName: String? {
+        guard let plan = planType?.lowercased() else { return nil }
+        switch plan {
+        case "plus": return "Plus"
+        case "pro": return "Pro"
+        case "team": return "Team"
+        case "enterprise": return "Enterprise"
+        case "free": return "Free"
+        default: return planType?.capitalized
+        }
     }
 }
 

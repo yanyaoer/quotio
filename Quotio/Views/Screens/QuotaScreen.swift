@@ -12,10 +12,14 @@ struct QuotaScreen: View {
         viewModel.authFiles.filter { $0.providerType == .antigravity }
     }
     
+    private var codexAccounts: [AuthFile] {
+        viewModel.authFiles.filter { $0.providerType == .codex }
+    }
+    
     private var otherProviderGroups: [(AIProvider, [AuthFile])] {
         let grouped = Dictionary(grouping: viewModel.authFiles) { $0.providerType }
         return AIProvider.allCases.compactMap { provider in
-            guard provider != .antigravity,
+            guard provider != .antigravity && provider != .codex,
                   let files = grouped[provider], !files.isEmpty else { return nil }
             return (provider, files)
         }
@@ -27,6 +31,14 @@ struct QuotaScreen: View {
     
     private var totalAccounts: Int {
         viewModel.authFiles.count
+    }
+    
+    private var providerCount: Int {
+        var count = 0
+        if !antigravityAccounts.isEmpty { count += 1 }
+        if !codexAccounts.isEmpty { count += 1 }
+        count += otherProviderGroups.count
+        return count
     }
     
     var body: some View {
@@ -49,32 +61,26 @@ struct QuotaScreen: View {
                         SummaryCard(
                             totalReady: totalReady,
                             totalAccounts: totalAccounts,
-                            providerCount: antigravityAccounts.count + otherProviderGroups.count
+                            providerCount: providerCount
                         )
                         
                         LazyVStack(spacing: 20) {
                             if !antigravityAccounts.isEmpty {
-                                Section {
-                                    ForEach(antigravityAccounts) { account in
-                                        AccountQuotaCard(
-                                            account: account,
-                                            quotaData: viewModel.providerQuotas[.antigravity]?[account.email ?? ""],
-                                            isLoading: viewModel.isLoadingQuotas && viewModel.providerQuotas[.antigravity]?[account.email ?? ""] == nil
-                                        )
-                                    }
-                                } header: {
-                                    HStack {
-                                        ProviderIcon(provider: .antigravity, size: 24)
-                                        Text("Antigravity")
-                                            .font(.title3)
-                                            .fontWeight(.semibold)
-                                        Spacer()
-                                        Text("\(antigravityAccounts.count) " + "quota.accounts".localized())
-                                            .font(.subheadline)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 4)
-                                }
+                                ProviderQuotaSection(
+                                    provider: .antigravity,
+                                    accounts: antigravityAccounts,
+                                    quotaData: viewModel.providerQuotas[.antigravity],
+                                    isLoading: viewModel.isLoadingQuotas
+                                )
+                            }
+                            
+                            if !codexAccounts.isEmpty {
+                                ProviderQuotaSection(
+                                    provider: .codex,
+                                    accounts: codexAccounts,
+                                    quotaData: viewModel.providerQuotas[.codex],
+                                    isLoading: viewModel.isLoadingQuotas
+                                )
                             }
                             
                             ForEach(otherProviderGroups, id: \.0) { provider, accounts in
@@ -91,6 +97,37 @@ struct QuotaScreen: View {
             }
         }
         .navigationTitle("nav.quota".localized())
+    }
+}
+
+private struct ProviderQuotaSection: View {
+    let provider: AIProvider
+    let accounts: [AuthFile]
+    let quotaData: [String: ProviderQuotaData]?
+    let isLoading: Bool
+    
+    var body: some View {
+        Section {
+            ForEach(accounts) { account in
+                AccountQuotaCard(
+                    account: account,
+                    quotaData: quotaData?[account.email ?? ""],
+                    isLoading: isLoading && quotaData?[account.email ?? ""] == nil
+                )
+            }
+        } header: {
+            HStack {
+                ProviderIcon(provider: provider, size: 24)
+                Text(provider.displayName)
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                Spacer()
+                Text("\(accounts.count) " + "quota.accounts".localized())
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 4)
+        }
     }
 }
 
@@ -142,6 +179,8 @@ struct AccountQuotaCard: View {
                     SubscriptionSkeletonView()
                 } else if let info = subscriptionInfo {
                     SubscriptionBadge(info: info)
+                } else if let planName = quotaData?.planDisplayName {
+                    PlanBadge(planName: planName)
                 }
                 
                 if isLoading {
@@ -180,6 +219,45 @@ private struct StatusBadge: View {
             .background(color.opacity(0.15))
             .foregroundStyle(color)
             .clipShape(Capsule())
+    }
+}
+
+private struct PlanBadge: View {
+    let planName: String
+    
+    private var planColor: Color {
+        switch planName.lowercased() {
+        case "pro": return .purple
+        case "plus": return .blue
+        case "team": return .orange
+        case "enterprise": return .red
+        default: return .gray
+        }
+    }
+    
+    private var planIcon: String {
+        switch planName.lowercased() {
+        case "pro": return "crown.fill"
+        case "plus": return "plus.circle.fill"
+        case "team": return "person.3.fill"
+        case "enterprise": return "building.2.fill"
+        default: return "person.fill"
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: planIcon)
+                .font(.subheadline)
+            Text(planName)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(planColor.opacity(0.15))
+        .foregroundStyle(planColor)
+        .clipShape(Capsule())
     }
 }
 
