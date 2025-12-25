@@ -25,7 +25,9 @@ xcodebuild archive \
     -destination "generic/platform=macOS" \
     SKIP_INSTALL=NO \
     BUILD_LIBRARY_FOR_DISTRIBUTION=YES \
-    CODE_SIGN_IDENTITY="${DEVELOPER_ID}" \
+    CODE_SIGN_IDENTITY="-" \
+    CODE_SIGNING_REQUIRED=NO \
+    CODE_SIGNING_ALLOWED=NO \
     2>&1 | tee "${BUILD_DIR}/build.log"
 
 if [ ! -d "${ARCHIVE_PATH}" ]; then
@@ -33,18 +35,18 @@ if [ ! -d "${ARCHIVE_PATH}" ]; then
     exit 1
 fi
 
-# Export app
-log_step "Exporting app..."
-xcodebuild -exportArchive \
-    -archivePath "${ARCHIVE_PATH}" \
-    -exportPath "${BUILD_DIR}" \
-    -exportOptionsPlist "${SCRIPT_DIR}/ExportOptions.plist" \
-    2>&1 | tee -a "${BUILD_DIR}/build.log"
+# Extract app from archive (skip export which requires signing)
+log_step "Extracting app from archive..."
+cp -R "${ARCHIVE_PATH}/Products/Applications/${PROJECT_NAME}.app" "${APP_PATH}"
 
 if [ ! -d "${APP_PATH}" ]; then
-    log_error "Export failed. Check ${BUILD_DIR}/build.log"
+    log_error "Failed to extract app from archive"
     exit 1
 fi
+
+# Ad-hoc sign for local use
+log_step "Ad-hoc signing app..."
+codesign --force --deep --sign - "${APP_PATH}" 2>/dev/null || true
 
 log_info "Build complete: ${APP_PATH}"
 log_info "Version: $(get_version) (build $(get_build_number))"
