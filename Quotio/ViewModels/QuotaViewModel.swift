@@ -125,8 +125,44 @@ final class QuotaViewModel {
         _ = await (antigravity, openai, copilot, claudeCode, cursor, codexCLI, geminiCLI)
         
         checkQuotaNotifications()
+        autoSelectMenuBarItems()
         
         isLoadingQuotas = false
+    }
+    
+    private func autoSelectMenuBarItems() {
+        var availableItems: [MenuBarQuotaItem] = []
+        var seen = Set<String>()
+        
+        for (provider, accountQuotas) in providerQuotas {
+            for (accountKey, _) in accountQuotas {
+                let item = MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
+                if !seen.contains(item.id) {
+                    seen.insert(item.id)
+                    availableItems.append(item)
+                }
+            }
+        }
+        
+        for file in authFiles {
+            guard let provider = file.providerType else { continue }
+            let accountKey = file.quotaLookupKey.isEmpty ? file.name : file.quotaLookupKey
+            let item = MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
+            if !seen.contains(item.id) {
+                seen.insert(item.id)
+                availableItems.append(item)
+            }
+        }
+        
+        for file in directAuthFiles {
+            let item = MenuBarQuotaItem(provider: file.provider.rawValue, accountKey: file.email ?? file.filename)
+            if !seen.contains(item.id) {
+                seen.insert(item.id)
+                availableItems.append(item)
+            }
+        }
+        
+        menuBarSettings.autoSelectNewAccounts(availableItems: availableItems)
     }
     
     /// Refresh Claude Code quota using CLI
@@ -308,6 +344,7 @@ final class QuotaViewModel {
         _ = await (antigravity, openai, copilot, cursor, claudeCode)
         
         checkQuotaNotifications()
+        autoSelectMenuBarItems()
         
         isLoadingQuotas = false
     }

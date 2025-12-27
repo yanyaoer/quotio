@@ -69,11 +69,25 @@ struct ProvidersScreen: View {
         .task {
             if modeManager.isQuotaOnlyMode {
                 await viewModel.loadDirectAuthFiles()
+            } else {
+                await viewModel.loadDirectAuthFiles()
             }
         }
     }
     
     // MARK: - Full Mode Content
+    
+    private var autoDetectedProviderAccounts: [(provider: AIProvider, accountKey: String)] {
+        var accounts: [(provider: AIProvider, accountKey: String)] = []
+        for (provider, quotas) in viewModel.providerQuotas {
+            if !provider.supportsManualAuth {
+                for (accountKey, _) in quotas {
+                    accounts.append((provider: provider, accountKey: accountKey))
+                }
+            }
+        }
+        return accounts
+    }
     
     @ViewBuilder
     private var fullModeContent: some View {
@@ -87,17 +101,27 @@ struct ProvidersScreen: View {
                     AuthFileRow(file: file) {
                         Task { await viewModel.deleteAuthFile(file) }
                     }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            Task { await viewModel.deleteAuthFile(file) }
-                        } label: {
-                            Label("action.delete".localized(), systemImage: "trash")
-                        }
-                    }
                 }
             }
         } header: {
             Label("providers.connectedAccounts".localized() + " (\(viewModel.authFiles.count))", systemImage: "checkmark.seal.fill")
+        } footer: {
+            if !viewModel.authFiles.isEmpty {
+                MenuBarHintView()
+            }
+        }
+        
+        // Auto-detected Accounts (like Cursor)
+        if !autoDetectedProviderAccounts.isEmpty {
+            Section {
+                ForEach(autoDetectedProviderAccounts, id: \.accountKey) { account in
+                    AutoDetectedAccountRow(provider: account.provider, accountKey: account.accountKey)
+                }
+            } header: {
+                Label("providers.autoDetected".localized() + " (\(autoDetectedProviderAccounts.count))", systemImage: "sparkle.magnifyingglass")
+            } footer: {
+                MenuBarHintView()
+            }
         }
         
         // Add Provider
@@ -145,6 +169,10 @@ struct ProvidersScreen: View {
                         .font(.caption)
                 }
                 .buttonStyle(.borderless)
+            }
+        } footer: {
+            if !viewModel.directAuthFiles.isEmpty {
+                MenuBarHintView()
             }
         }
         
@@ -222,6 +250,26 @@ struct ProvidersScreen: View {
 
 struct DirectAuthFileRow: View {
     let file: DirectAuthFile
+    @State private var settings = MenuBarSettingsManager.shared
+    @State private var showWarning = false
+    
+    private var menuBarItem: MenuBarQuotaItem {
+        MenuBarQuotaItem(provider: file.provider.rawValue, accountKey: file.email ?? file.filename)
+    }
+    
+    private var isSelected: Bool {
+        settings.isSelected(menuBarItem)
+    }
+    
+    private func handleToggle() {
+        if isSelected {
+            settings.toggleItem(menuBarItem)
+        } else if settings.shouldWarnOnAdd {
+            showWarning = true
+        } else {
+            settings.toggleItem(menuBarItem)
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -247,6 +295,30 @@ struct DirectAuthFileRow: View {
             }
             
             Spacer()
+            
+            MenuBarBadge(
+                isSelected: isSelected,
+                onTap: handleToggle
+            )
+        }
+        .contextMenu {
+            Button {
+                handleToggle()
+            } label: {
+                if isSelected {
+                    Label("menubar.hideFromMenuBar".localized(), systemImage: "chart.bar")
+                } else {
+                    Label("menubar.showOnMenuBar".localized(), systemImage: "chart.bar.fill")
+                }
+            }
+        }
+        .alert("menubar.warning.title".localized(), isPresented: $showWarning) {
+            Button("menubar.warning.confirm".localized()) {
+                settings.toggleItem(menuBarItem)
+            }
+            Button("menubar.warning.cancel".localized(), role: .cancel) {}
+        } message: {
+            Text("menubar.warning.message".localized())
         }
     }
 }
@@ -256,6 +328,30 @@ struct DirectAuthFileRow: View {
 struct AuthFileRow: View {
     let file: AuthFile
     let onDelete: () -> Void
+    @State private var settings = MenuBarSettingsManager.shared
+    @State private var showWarning = false
+    
+    private var menuBarItem: MenuBarQuotaItem? {
+        guard let provider = file.providerType else { return nil }
+        let accountKey = file.quotaLookupKey.isEmpty ? file.name : file.quotaLookupKey
+        return MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
+    }
+    
+    private var isSelected: Bool {
+        guard let item = menuBarItem else { return false }
+        return settings.isSelected(item)
+    }
+    
+    private func handleToggle() {
+        guard let item = menuBarItem else { return }
+        if isSelected {
+            settings.toggleItem(item)
+        } else if settings.shouldWarnOnAdd {
+            showWarning = true
+        } else {
+            settings.toggleItem(item)
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -298,6 +394,13 @@ struct AuthFileRow: View {
                     .clipShape(Capsule())
             }
             
+            if menuBarItem != nil {
+                MenuBarBadge(
+                    isSelected: isSelected,
+                    onTap: handleToggle
+                )
+            }
+            
             Button(role: .destructive) {
                 onDelete()
             } label: {
@@ -306,6 +409,166 @@ struct AuthFileRow: View {
             }
             .buttonStyle(.borderless)
             .help("action.delete".localized())
+        }
+        .contextMenu {
+            if menuBarItem != nil {
+                Button {
+                    handleToggle()
+                } label: {
+                    if isSelected {
+                        Label("menubar.hideFromMenuBar".localized(), systemImage: "chart.bar")
+                    } else {
+                        Label("menubar.showOnMenuBar".localized(), systemImage: "chart.bar.fill")
+                    }
+                }
+                
+                Divider()
+            }
+            
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("action.delete".localized(), systemImage: "trash")
+            }
+        }
+        .alert("menubar.warning.title".localized(), isPresented: $showWarning) {
+            Button("menubar.warning.confirm".localized()) {
+                if let item = menuBarItem {
+                    settings.toggleItem(item)
+                }
+            }
+            Button("menubar.warning.cancel".localized(), role: .cancel) {}
+        } message: {
+            Text("menubar.warning.message".localized())
+        }
+    }
+}
+
+// MARK: - Auto-detected Account Row (for Cursor, etc.)
+
+struct AutoDetectedAccountRow: View {
+    let provider: AIProvider
+    let accountKey: String
+    @State private var settings = MenuBarSettingsManager.shared
+    @State private var showWarning = false
+    
+    private var menuBarItem: MenuBarQuotaItem {
+        MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
+    }
+    
+    private var isSelected: Bool {
+        settings.isSelected(menuBarItem)
+    }
+    
+    private func handleToggle() {
+        if isSelected {
+            settings.toggleItem(menuBarItem)
+        } else if settings.shouldWarnOnAdd {
+            showWarning = true
+        } else {
+            settings.toggleItem(menuBarItem)
+        }
+    }
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            ProviderIcon(provider: provider, size: 24)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(accountKey)
+                    .fontWeight(.medium)
+                
+                HStack(spacing: 6) {
+                    Text(provider.displayName)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    
+                    Text("•")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    
+                    Text("providers.autoDetected".localized())
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            
+            Spacer()
+            
+            MenuBarBadge(
+                isSelected: isSelected,
+                onTap: handleToggle
+            )
+        }
+        .contextMenu {
+            Button {
+                handleToggle()
+            } label: {
+                if isSelected {
+                    Label("menubar.hideFromMenuBar".localized(), systemImage: "chart.bar")
+                } else {
+                    Label("menubar.showOnMenuBar".localized(), systemImage: "chart.bar.fill")
+                }
+            }
+        }
+        .alert("menubar.warning.title".localized(), isPresented: $showWarning) {
+            Button("menubar.warning.confirm".localized()) {
+                settings.toggleItem(menuBarItem)
+            }
+            Button("menubar.warning.cancel".localized(), role: .cancel) {}
+        } message: {
+            Text("menubar.warning.message".localized())
+        }
+    }
+}
+
+// MARK: - Menu Bar Badge Component
+
+struct MenuBarBadge: View {
+    let isSelected: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        Button(action: onTap) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.clear)
+                    .frame(width: 28, height: 28)
+                
+                Image(systemName: isSelected ? "chart.bar.fill" : "chart.bar")
+                    .font(.system(size: 14))
+                    .foregroundStyle(isSelected ? .blue : .secondary)
+            }
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering {
+                showTooltip = true
+            } else {
+                showTooltip = false
+            }
+        }
+        .popover(isPresented: $showTooltip, arrowEdge: .bottom) {
+            Text(isSelected ? "menubar.hideFromMenuBar".localized() : "menubar.showOnMenuBar".localized())
+                .font(.caption)
+                .padding(8)
+        }
+    }
+    
+    @State private var showTooltip = false
+}
+
+// MARK: - Menu Bar Hint View
+
+struct MenuBarHintView: View {
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "chart.bar.fill")
+                .foregroundStyle(.blue)
+                .font(.caption2)
+            Text("menubar.hint".localized())
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 }

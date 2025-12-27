@@ -107,6 +107,7 @@ struct LocalizedStrings {
         "providers.authFailed": [.english: "Authentication failed", .vietnamese: "Xác thực thất bại"],
         "providers.projectIdOptional": [.english: "Project ID (optional)", .vietnamese: "ID dự án (tùy chọn)"],
         "providers.disabled": [.english: "Disabled", .vietnamese: "Đã tắt"],
+        "providers.autoDetected": [.english: "Auto-detected", .vietnamese: "Tự động phát hiện"],
         
         // Settings
         "settings.proxyServer": [.english: "Proxy Server", .vietnamese: "Máy chủ proxy"],
@@ -232,6 +233,7 @@ struct LocalizedStrings {
         
         // Menu Bar Settings
         "settings.menubar": [.english: "Menu Bar", .vietnamese: "Thanh Menu"],
+        "settings.menubar.showIcon": [.english: "Show Menu Bar Icon", .vietnamese: "Hiển thị icon trên Menu Bar"],
         "settings.menubar.showQuota": [.english: "Show Quota in Menu Bar", .vietnamese: "Hiển thị Quota trên Menu Bar"],
         "settings.menubar.colorMode": [.english: "Color Mode", .vietnamese: "Chế độ màu"],
         "settings.menubar.colored": [.english: "Colored", .vietnamese: "Có màu"],
@@ -240,6 +242,21 @@ struct LocalizedStrings {
         "settings.menubar.selected": [.english: "Displayed", .vietnamese: "Đang hiển thị"],
         "settings.menubar.noQuotaData": [.english: "No quota data available. Add accounts with quota support.", .vietnamese: "Không có dữ liệu quota. Thêm tài khoản hỗ trợ quota."],
         "settings.menubar.help": [.english: "Choose which accounts to show in the menu bar. Maximum 3 items will be displayed.", .vietnamese: "Chọn tài khoản muốn hiển thị trên thanh menu. Tối đa 3 mục."],
+        
+        "menubar.showOnMenuBar": [.english: "Show on Menu Bar", .vietnamese: "Hiển thị trên Menu Bar"],
+        "menubar.hideFromMenuBar": [.english: "Hide from Menu Bar", .vietnamese: "Ẩn khỏi Menu Bar"],
+        "menubar.limitReached": [.english: "Menu bar limit reached", .vietnamese: "Đã đạt giới hạn Menu Bar"],
+        
+        "menubar.warning.title": [.english: "Too Many Items", .vietnamese: "Quá nhiều mục"],
+        "menubar.warning.message": [.english: "Displaying more than 3 items may make the menu bar cluttered. Are you sure you want to continue?", .vietnamese: "Hiển thị hơn 3 mục có thể làm thanh menu lộn xộn. Bạn có chắc muốn tiếp tục?"],
+        "menubar.warning.confirm": [.english: "Add Anyway", .vietnamese: "Vẫn thêm"],
+        "menubar.warning.cancel": [.english: "Cancel", .vietnamese: "Hủy"],
+        
+        "menubar.info.title": [.english: "Menu Bar Display", .vietnamese: "Hiển thị Menu Bar"],
+        "menubar.info.description": [.english: "Click the chart icon to toggle displaying this account's quota in the menu bar.", .vietnamese: "Nhấn vào biểu tượng biểu đồ để bật/tắt hiển thị quota của tài khoản này trên menu bar."],
+        "menubar.info.enabled": [.english: "Showing in menu bar", .vietnamese: "Đang hiển thị trên menu bar"],
+        "menubar.info.disabled": [.english: "Not showing in menu bar", .vietnamese: "Không hiển thị trên menu bar"],
+        "menubar.hint": [.english: "Click the chart icon to toggle menu bar display", .vietnamese: "Nhấn biểu tượng biểu đồ để bật/tắt hiển thị trên menu bar"],
         
         // Quota Display Mode Settings
         "settings.quota.display": [.english: "Quota Display", .vietnamese: "Hiển thị Quota"],

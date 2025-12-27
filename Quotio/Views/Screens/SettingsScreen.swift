@@ -527,31 +527,11 @@ struct MenuBarSettingsSection: View {
     @Environment(QuotaViewModel.self) private var viewModel
     @State private var settings = MenuBarSettingsManager.shared
     
-    private var availableItems: [MenuBarQuotaItem] {
-        var items: [MenuBarQuotaItem] = []
-        var seen = Set<String>()
-        
-        for (provider, accountQuotas) in viewModel.providerQuotas {
-            for (accountKey, _) in accountQuotas {
-                let item = MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
-                if !seen.contains(item.id) {
-                    seen.insert(item.id)
-                    items.append(item)
-                }
-            }
-        }
-        
-        for authFile in viewModel.authFiles {
-            guard let provider = authFile.providerType else { continue }
-            let accountKey = authFile.quotaLookupKey
-            let item = MenuBarQuotaItem(provider: provider.rawValue, accountKey: accountKey)
-            if !seen.contains(item.id) {
-                seen.insert(item.id)
-                items.append(item)
-            }
-        }
-        
-        return items.sorted { $0.id < $1.id }
+    private var showMenuBarIconBinding: Binding<Bool> {
+        Binding(
+            get: { settings.showMenuBarIcon },
+            set: { settings.showMenuBarIcon = $0 }
+        )
     }
     
     private var showQuotaBinding: Binding<Bool> {
@@ -570,44 +550,17 @@ struct MenuBarSettingsSection: View {
     
     var body: some View {
         Section {
-            Toggle("settings.menubar.showQuota".localized(), isOn: showQuotaBinding)
+            Toggle("settings.menubar.showIcon".localized(), isOn: showMenuBarIconBinding)
             
-            if settings.showQuotaInMenuBar {
-                Picker("settings.menubar.colorMode".localized(), selection: colorModeBinding) {
-                    Text("settings.menubar.colored".localized()).tag(MenuBarColorMode.colored)
-                    Text("settings.menubar.monochrome".localized()).tag(MenuBarColorMode.monochrome)
-                }
-                .pickerStyle(.segmented)
+            if settings.showMenuBarIcon {
+                Toggle("settings.menubar.showQuota".localized(), isOn: showQuotaBinding)
                 
-                if availableItems.isEmpty {
-                    HStack {
-                        Image(systemName: "exclamationmark.triangle")
-                            .foregroundStyle(.orange)
-                        Text("settings.menubar.noQuotaData".localized())
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                if settings.showQuotaInMenuBar {
+                    Picker("settings.menubar.colorMode".localized(), selection: colorModeBinding) {
+                        Text("settings.menubar.colored".localized()).tag(MenuBarColorMode.colored)
+                        Text("settings.menubar.monochrome".localized()).tag(MenuBarColorMode.monochrome)
                     }
-                } else {
-                    DisclosureGroup("settings.menubar.selectAccounts".localized()) {
-                        ForEach(availableItems) { item in
-                            MenuBarItemRow(
-                                item: item,
-                                isSelected: settings.isSelected(item)
-                            ) {
-                                settings.toggleItem(item)
-                            }
-                        }
-                    }
-                    
-                    if !settings.selectedItems.isEmpty {
-                        HStack {
-                            Text("settings.menubar.selected".localized())
-                            Spacer()
-                            Text("\(min(settings.selectedItems.count, 3))/3")
-                                .foregroundStyle(.secondary)
-                        }
-                        .font(.caption)
-                    }
+                    .pickerStyle(.segmented)
                 }
             }
         } header: {
@@ -615,58 +568,6 @@ struct MenuBarSettingsSection: View {
         } footer: {
             Text("settings.menubar.help".localized())
         }
-    }
-}
-
-private struct MenuBarItemRow: View {
-    let item: MenuBarQuotaItem
-    let isSelected: Bool
-    let onToggle: () -> Void
-    
-    var body: some View {
-        Button(action: onToggle) {
-            HStack(spacing: 12) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundStyle(isSelected ? .blue : .secondary)
-                
-                if let provider = item.aiProvider {
-                    ProviderIcon(provider: provider, size: 20)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.aiProvider?.displayName ?? item.provider)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    Text(item.accountKey)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 4)
-    }
-}
-
-struct AppSettingsView: View {
-    var body: some View {
-        TabView {
-            GeneralSettingsTab()
-                .tabItem {
-                    Label("settings.general".localized(), systemImage: "gearshape")
-                }
-            
-            AboutTab()
-                .tabItem {
-                    Label("settings.about".localized(), systemImage: "info.circle")
-                }
-        }
-        .frame(width: 450, height: 300)
     }
 }
 

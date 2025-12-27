@@ -109,10 +109,16 @@ final class MenuBarSettingsManager {
     private let defaults = UserDefaults.standard
     private let selectedItemsKey = "menuBarSelectedQuotaItems"
     private let colorModeKey = "menuBarColorMode"
+    private let showMenuBarIconKey = "showMenuBarIcon"
     private let showQuotaKey = "menuBarShowQuota"
     private let quotaDisplayModeKey = "quotaDisplayMode"
     
-    /// Whether to show quota in menu bar
+    /// Whether to show menu bar icon at all
+    var showMenuBarIcon: Bool {
+        didSet { defaults.set(showMenuBarIcon, forKey: showMenuBarIconKey) }
+    }
+    
+    /// Whether to show quota in menu bar (only effective when showMenuBarIcon is true)
     var showQuotaInMenuBar: Bool {
         didSet { defaults.set(showQuotaInMenuBar, forKey: showQuotaKey) }
     }
@@ -132,11 +138,27 @@ final class MenuBarSettingsManager {
         didSet { defaults.set(quotaDisplayMode.rawValue, forKey: quotaDisplayModeKey) }
     }
     
-    /// Maximum number of items to display in menu bar
-    let maxDisplayItems = 3
+    /// Threshold for warning when adding more items
+    let warningThreshold = 3
+    
+    /// Check if adding another item would exceed the warning threshold
+    var shouldWarnOnAdd: Bool {
+        selectedItems.count >= warningThreshold
+    }
     
     private init() {
+        // Show menu bar icon - default true if not set
+        if defaults.object(forKey: showMenuBarIconKey) == nil {
+            defaults.set(true, forKey: showMenuBarIconKey)
+        }
+        self.showMenuBarIcon = defaults.bool(forKey: showMenuBarIconKey)
+        
+        // Show quota in menu bar - default true if not set
+        if defaults.object(forKey: showQuotaKey) == nil {
+            defaults.set(true, forKey: showQuotaKey)
+        }
         self.showQuotaInMenuBar = defaults.bool(forKey: showQuotaKey)
+        
         self.colorMode = MenuBarColorMode(rawValue: defaults.string(forKey: colorModeKey) ?? "") ?? .colored
         self.quotaDisplayMode = QuotaDisplayMode(rawValue: defaults.string(forKey: quotaDisplayModeKey) ?? "") ?? .used
         self.selectedItems = Self.loadSelectedItems(from: defaults, key: selectedItemsKey)
@@ -156,9 +178,14 @@ final class MenuBarSettingsManager {
         return items
     }
     
-    /// Add an item to display
     func addItem(_ item: MenuBarQuotaItem) {
         guard !selectedItems.contains(item) else { return }
+        if !showQuotaInMenuBar {
+            showQuotaInMenuBar = true
+        }
+        if !showMenuBarIcon {
+            showMenuBarIcon = true
+        }
         selectedItems.append(item)
     }
     
@@ -185,5 +212,16 @@ final class MenuBarSettingsManager {
     func pruneInvalidItems(validItems: [MenuBarQuotaItem]) {
         let validIds = Set(validItems.map(\.id))
         selectedItems.removeAll { !validIds.contains($0.id) }
+    }
+    
+    func autoSelectNewAccounts(availableItems: [MenuBarQuotaItem]) {
+        let existingIds = Set(selectedItems.map(\.id))
+        let newItems = availableItems.filter { !existingIds.contains($0.id) }
+        
+        let remainingSlots = warningThreshold - selectedItems.count
+        if remainingSlots > 0 {
+            let itemsToAdd = Array(newItems.prefix(remainingSlots))
+            selectedItems.append(contentsOf: itemsToAdd)
+        }
     }
 }

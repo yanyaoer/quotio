@@ -35,7 +35,7 @@ struct QuotioApp: App {
         
         var items: [MenuBarQuotaDisplayItem] = []
         
-        for selectedItem in menuBarSettings.selectedItems.prefix(3) {
+        for selectedItem in menuBarSettings.selectedItems {
             guard let provider = selectedItem.aiProvider else { continue }
             
             if let accountQuotas = viewModel.providerQuotas[provider],
@@ -70,6 +70,7 @@ struct QuotioApp: App {
             items: quotaItems,
             colorMode: menuBarSettings.colorMode,
             isRunning: isRunning,
+            showMenuBarIcon: menuBarSettings.showMenuBarIcon,
             showQuota: menuBarSettings.showQuotaInMenuBar,
             menuContentProvider: {
                 AnyView(
@@ -111,6 +112,9 @@ struct QuotioApp: App {
                     updateStatusBar()
                 }
                 .onChange(of: menuBarSettings.showQuotaInMenuBar) {
+                    updateStatusBar()
+                }
+                .onChange(of: menuBarSettings.showMenuBarIcon) {
                     updateStatusBar()
                 }
                 .onChange(of: menuBarSettings.selectedItems) {

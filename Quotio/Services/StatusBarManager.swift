@@ -23,9 +23,15 @@ final class StatusBarManager {
         items: [MenuBarQuotaDisplayItem],
         colorMode: MenuBarColorMode,
         isRunning: Bool,
+        showMenuBarIcon: Bool,
         showQuota: Bool,
         menuContentProvider: @escaping () -> AnyView
     ) {
+        guard showMenuBarIcon else {
+            removeStatusItem()
+            return
+        }
+        
         if statusItem == nil {
             statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         }
@@ -50,7 +56,7 @@ final class StatusBarManager {
             )
         } else {
             contentView = AnyView(
-                StatusBarQuotaView(items: Array(items.prefix(3)), colorMode: colorMode)
+                StatusBarQuotaView(items: items, colorMode: colorMode)
             )
         }
         
