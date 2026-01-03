@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **changelog**: clean up duplicates and add auto-squash for prereleases (fa1a273)
+
 ## [0.4.4] - 2026-01-03
 
 ### Added
