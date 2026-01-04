@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **changelog**: clean up duplicates and add auto-squash for prereleases (fa1a273)
 
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
+
 ## [0.4.4] - 2026-01-03
 
 ### Fixed
@@ -71,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Dynamic language switching without app restart
   - Modernize `LanguageManager` with `@Observable` pattern
   - Migrate legacy "zh" language code to "zh-Hans"
+
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
 
 ### Fixed
 
@@ -188,6 +192,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **About Screen Redesign**: Move update settings into About screen with modern card-based UI
 
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
+
 ### Fixed
 
 - **Privacy**: Reduce file system access to address macOS privacy warnings (#33)
@@ -220,6 +226,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Menu Bar Redesign**: Provider-first layout with improved Liquid Glass compatibility
 - **Menu Bar Animation**: Use Timer-based rotation for reliable refresh animation
 
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
+
 ### Fixed
 
 - **Cursor SQLite**: Use immutable mode to avoid WAL file lock errors
@@ -251,6 +259,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Increase auto-refresh interval from 5s to 15s to reduce connection pressure (#11)
 
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
+
 ### Fixed
 
 - **Proxy Connection Leak**: Fix URLSession connection leak in ManagementAPIClient with proper lifecycle management (#11)
@@ -274,6 +284,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated and optimized app screenshots
+
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
 
 ### Fixed
 
@@ -303,6 +315,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Better Status Section**: Improved sidebar layout and port display formatting
 - **Improved Mode Picker**: Fixed UI freeze when switching app modes
 
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
+
 ### Fixed
 
 - UI freeze when switching between Proxy and Quota-Only modes
@@ -329,6 +343,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Menu bar now persists when main window is closed (app runs in background)
 - Improved build configuration with xcconfig support for dev/prod separation
+
+- Memory optimization - reduce RAM from 150-250MB to <100MB (#100)
 
 ### Fixed
 
