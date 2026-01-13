@@ -16379,6 +16379,116 @@
         }
       }
     },
+    "settings.usageDisplay.description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control how overall quota usage is calculated across session and extra limits."
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.modelAggregation.average" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Average remaining"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.modelAggregation.description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When multiple model limits exist, choose how to summarize the total."
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.modelAggregation.lowest" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lowest remaining (default)"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.modelAggregation.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Model-Specific Aggregation"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usage Display"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.totalMode.combined" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session + extra"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.totalMode.description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose whether the total usage reflects only session limits or combines session and extra usage."
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.totalMode.sessionOnly" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Session only (default)"
+          }
+        }
+      }
+    },
+    "settings.usageDisplay.totalMode.title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Total Usage Calculation"
+          }
+        }
+      }
+    },
     "settings.version" : {
       "extractionState" : "stale",
       "localizations" : {
