@@ -72,6 +72,22 @@ python3 main.py proxy start
 python3 main.py models list
 ```
 
+### 4. 查看剩余 Quota
+
+查看 Kiro 账户的剩余使用配额（需要有效的 access token）。
+
+```bash
+python3 main.py quota
+```
+
+此命令会显示：
+- 用户信息（邮箱、用户 ID）
+- 订阅类型（Free Tier / Pro）
+- 各项资源的使用情况（Agentic Requests、Code Completions 等）
+- 剩余配额和重置时间
+
+**注意**: 如果 access token 已过期，请先运行 `python3 main.py token refresh` 刷新令牌。
+
 ## 客户端配置
 
 ### Claude Code (`claude`)

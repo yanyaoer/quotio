@@ -72,6 +72,22 @@ Verify the proxy is working and list available models.
 python3 main.py models list
 ```
 
+### 4. Check Quota
+
+View remaining usage quota for your Kiro account (requires valid access token).
+
+```bash
+python3 main.py quota
+```
+
+This command displays:
+- User information (email, user ID)
+- Subscription type (Free Tier / Pro)
+- Resource usage breakdown (Agentic Requests, Code Completions, etc.)
+- Remaining quota and reset time
+
+**Note**: If your access token has expired, run `python3 main.py token refresh` first to refresh the token.
+
 ## Client Configuration
 
 ### Claude Code (`claude`)

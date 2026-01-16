@@ -12,6 +12,7 @@ from auth_server import AuthServer
 from proxy_manager import ProxyManager
 from credential_store import CredentialStore
 from token_manager import TokenManager
+from quota_fetcher import QuotaFetcher
 
 
 def main():
@@ -35,6 +36,9 @@ def main():
   # 刷新所有过期或即将过期的令牌
   python main.py token refresh
 
+  # 查看 Kiro 账户剩余 quota
+  python main.py quota
+
   # 启动代理服务
   python main.py proxy start --port 8317
 
@@ -43,6 +47,9 @@ def main():
 
   # 列出已认证账户
   python main.py accounts list
+
+  # 查看 Kiro 账户剩余 quota
+  python main.py quota
 '''
     )
 
@@ -101,6 +108,12 @@ def main():
     refresh_parser.add_argument('--verbose', '-v', action='store_true',
                                help='显示详细信息')
 
+    # quota 命令（新增）
+    quota_parser = subparsers.add_parser('quota', help='查看账户剩余 quota')
+    quota_parser.add_argument('account', nargs='?', default='kiro',
+                             choices=['kiro'],
+                             help='账户类型 (默认: kiro)')
+
     args = parser.parse_args()
 
     if not args.command:
@@ -117,6 +130,8 @@ def main():
         handle_accounts(args)
     elif args.command == 'token':
         handle_token(args)
+    elif args.command == 'quota':
+        handle_quota(args)
     elif args.command == 'install':
         handle_install(args)
 
@@ -195,6 +210,13 @@ def handle_token(args):
         print(f"\n✓ 已刷新 {count} 个令牌")
     else:
         print("请指定操作: refresh")
+
+
+def handle_quota(args):
+    """处理 quota 查询命令"""
+    fetcher = QuotaFetcher()
+    success = fetcher.fetch_and_display_quota(args.account)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == '__main__':
