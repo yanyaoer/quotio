@@ -111,7 +111,7 @@ def main():
     # quota 命令（新增）
     quota_parser = subparsers.add_parser('quota', help='查看账户剩余 quota')
     quota_parser.add_argument('account', nargs='?', default='kiro',
-                             choices=['kiro'],
+                             choices=['kiro', 'antigravity'],
                              help='账户类型 (默认: kiro)')
 
     args = parser.parse_args()

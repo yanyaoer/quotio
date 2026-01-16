@@ -148,6 +148,141 @@ class QuotaFetcher:
         lines.append("\n" + "=" * 70)
         return "\n".join(lines)
 
+    def _fetch_antigravity_quota(self) -> bool:
+        """
+        获取 Antigravity 账户 Quota 信息
+        参考 Swift: AntigravityQuotaFetcher.swift
+        """
+        store = CredentialStore()
+        auth_files = store.list_auth_files(provider='antigravity')
+        
+        if not auth_files:
+            print(f"❌ 未找到 antigravity 认证文件")
+            print(f"   请先运行: python3 main.py auth antigravity")
+            return False
+            
+        print(f"\n找到 {len(auth_files)} 个 Antigravity 账户\n")
+        
+        for i, auth_data in enumerate(auth_files, 1):
+            access_token = auth_data.get('access_token')
+            email = auth_data.get('email', 'Unknown')
+            
+            print(f"[{i}/{len(auth_files)}] 正在查询账户: {email} ...")
+            
+            if not access_token:
+                 print(f"❌ 认证文件中缺少 access_token")
+                 continue
+    
+            # 1. 获取 Project ID
+            project_id = self._fetch_antigravity_project_id(access_token)
+            if not project_id:
+                print("❌ 获取 Project ID 失败")
+                continue
+                
+            # 2. 获取 Quota
+            quota_data = self._fetch_antigravity_models(access_token, project_id)
+            if not quota_data:
+                print("❌ 获取 Quota 信息失败")
+                continue
+                
+            # 3. 显示结果
+            self._display_antigravity_quota(email, quota_data)
+            
+        return True
+
+    def _fetch_antigravity_project_id(self, access_token: str) -> Optional[str]:
+        """获取 Antigravity Project ID"""
+        url = "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist"
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'User-Agent': 'antigravity/1.11.3 Darwin/arm64',
+            'Content-Type': 'application/json'
+        }
+        payload = {"metadata": {"ideType": "ANTIGRAVITY"}}
+        
+        try:
+            response = self.session.post(url, headers=headers, json=payload, timeout=15)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('cloudaicompanionProject')
+            else:
+                print(f"⚠️  获取 Project ID 失败 (HTTP {response.status_code}): {response.text}")
+                return None
+        except Exception as e:
+            print(f"⚠️  获取 Project ID 异常: {e}")
+            return None
+
+    def _fetch_antigravity_models(self, access_token: str, project_id: str) -> Optional[Dict]:
+        """获取 Antigravity 模型及 Quota"""
+        url = "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels"
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'User-Agent': 'antigravity/1.11.3 Darwin/arm64',
+            'Content-Type': 'application/json'
+        }
+        payload = {"project": project_id}
+        
+        try:
+            response = self.session.post(url, headers=headers, json=payload, timeout=15)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 403:
+                print("❌ 访问被拒绝 (403 Forbidden)")
+                return None
+            else:
+                print(f"⚠️  获取 Quota 失败 (HTTP {response.status_code}): {response.text}")
+                return None
+        except Exception as e:
+            print(f"⚠️  获取 Quota 异常: {e}")
+            return None
+
+    def _display_antigravity_quota(self, email: str, quota_data: Dict):
+        """显示 Antigravity Quota"""
+        print("=" * 70)
+        print("Antigravity (Gemini) 账户使用情况")
+        print("=" * 70)
+        print(f"\n📧 用户: {email}")
+        
+        models = quota_data.get('models', {})
+        if not models:
+            print("\n⚠️  未找到模型信息")
+        else:
+            print("\n📊 模型额度:")
+            
+            # 过滤并显示感兴趣的模型
+            relevant_keys = [k for k in models.keys() if 'gemini' in k.lower() or 'claude' in k.lower()]
+            
+            if not relevant_keys:
+                print("   (无 Gemini/Claude 相关模型)")
+            
+            for name in relevant_keys:
+                info = models[name]
+                quota_info = info.get('quotaInfo')
+                
+                if quota_info:
+                    remaining_fraction = quota_info.get('remainingFraction', 0)
+                    reset_time = quota_info.get('resetTime', '未知')
+                    
+                    percentage = remaining_fraction * 100
+                    used_percentage = 100 - percentage
+                    
+                    # 格式化显示名称
+                    display_name = name.replace("gemini-", "Gemini ").replace("claude-", "Claude ").title()
+                    
+                    # 进度条
+                    bar_width = 30
+                    filled = int((used_percentage / 100) * bar_width)
+                    # 确保 filled 不超过 bar_width
+                    filled = min(filled, bar_width)
+                    bar = "█" * filled + "░" * (bar_width - filled)
+                    
+                    print(f"\n   {display_name}:")
+                    print(f"      剩余: {percentage:.1f}%")
+                    print(f"      重置: {reset_time}")
+                    print(f"      使用: [{bar}] {used_percentage:.1f}%")
+
+        print("\n" + "=" * 70)
+
     def fetch_and_display_quota(self, account_type: str = 'kiro') -> bool:
         """
         从凭证存储中获取令牌并显示 quota 信息
@@ -158,9 +293,12 @@ class QuotaFetcher:
         Returns:
             成功返回 True，失败返回 False
         """
+        if account_type == 'antigravity':
+            return self._fetch_antigravity_quota()
+
         if account_type != 'kiro':
             print(f"❌ 不支持的账户类型: {account_type}")
-            print("   当前仅支持 Kiro 账户的 quota 查询")
+            print("   当前仅支持 Kiro 和 Antigravity 账户的 quota 查询")
             return False
 
         # 加载凭证

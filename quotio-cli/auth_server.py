@@ -28,8 +28,8 @@ class AuthServer:
     ANTIGRAVITY_SCOPES = [
         "openid",
         "https://www.googleapis.com/auth/userinfo.email",
-        "https://www.googleapis.com/auth/cloud_code.assistants",
-        "https://www.googleapis.com/auth/cloudaicompanion"
+        "https://www.googleapis.com/auth/userinfo.profile",
+        "https://www.googleapis.com/auth/cloud-platform"
     ]
 
     # Kiro Google OAuth 配置
@@ -58,10 +58,70 @@ class AuthServer:
         self._pkce_verifier: Optional[str] = None  # PKCE code verifier
 
         # 支持自定义 AWS 配置（企业 IAM Identity Center）
-        if aws_start_url:
-            self.KIRO_AWS_START_URL = aws_start_url
         if aws_region:
             self.KIRO_AWS_REGION = aws_region
+
+        # 尝试从 Config 加载 Antigravity 凭证（如果环境变量为空）
+        self._load_config_credentials()
+
+    def _load_config_credentials(self):
+        """从 config.yaml 加载凭证"""
+        # 如果环境变量已设置，优先使用环境变量
+        if self.ANTIGRAVITY_CLIENT_ID and self.ANTIGRAVITY_CLIENT_SECRET:
+            return
+
+        config_path = os.path.expanduser("~/.quotio-cli/config.yaml")
+        if not os.path.exists(config_path):
+            return
+
+        try:
+            # 简单解析 YAML 以避免 pyyaml 依赖 (或使用 pyyaml 如果可用)
+            client_id = ""
+            client_secret = ""
+            
+            with open(config_path, 'r') as f:
+                # 简单查找逻辑，适配 proxy_manager 生成的格式
+                # providers:
+                #   antigravity:
+                #     client_id: ...
+                #     client_secret: ...
+                lines = f.readlines()
+                in_providers = False
+                in_antigravity = False
+                
+                for line in lines:
+                    stripped = line.strip()
+                    if stripped.startswith("providers:"):
+                        in_providers = True
+                        continue
+                    if in_providers and stripped.startswith("antigravity:"):
+                        in_antigravity = True
+                        continue
+                    
+                    if in_antigravity:
+                        if "client_id:" in stripped:
+                            parts = stripped.split(":", 1)
+                            if len(parts) > 1:
+                                client_id = parts[1].strip().strip('"').strip("'")
+                        elif "client_secret:" in stripped:
+                             parts = stripped.split(":", 1)
+                             if len(parts) > 1:
+                                client_secret = parts[1].strip().strip('"').strip("'")
+                        elif stripped and not stripped.startswith("#") and ":" in stripped:
+                             # 遇到新 key (且缩进更少或相同)，退出 antigravity 块
+                             # 简单的缩进检查
+                             indent = len(line) - len(line.lstrip())
+                             if indent < 4: # 假设 antigravity 缩进是 4
+                                 in_antigravity = False
+                                 in_providers = False
+            
+            if client_id:
+                self.ANTIGRAVITY_CLIENT_ID = client_id
+            if client_secret:
+                self.ANTIGRAVITY_CLIENT_SECRET = client_secret
+                
+        except Exception as e:
+            print(f"⚠️  加载配置文件出错: {e}")
 
     def _detect_ip(self) -> str:
         """检测服务器的公网/局域网 IP"""
@@ -151,7 +211,7 @@ class AuthServer:
             return json.loads(resp.read().decode('utf-8'))
 
     def _create_callback_handler(self, provider: str, client_id: str,
-                                  client_secret: str):
+                                  client_secret: str, redirect_uri: Optional[str] = None):
         """创建 OAuth 回调处理器"""
         server = self
 
@@ -173,6 +233,11 @@ class AuthServer:
                 code = params.get('code', [None])[0]
                 error = params.get('error', [None])[0]
 
+                # 确定使用的 redirect_uri (用于 token 交换校验)
+                # 如果传入了 explicit redirect_uri, 则使用它 (Antigravity 必须是 127.0.0.1)
+                # 否则使用默认逻辑检测
+                actual_redirect_uri = redirect_uri or server._get_callback_url()
+
                 if error:
                     server._auth_result = {"error": error}
                     self._send_html(f"认证失败: {error}")
@@ -180,7 +245,7 @@ class AuthServer:
                     try:
                         token_data = server._exchange_code_for_token(
                             code, client_id, client_secret,
-                            server._get_callback_url()
+                            actual_redirect_uri
                         )
                         user_info = server._get_user_info(token_data['access_token'])
                         server._auth_result = {
@@ -215,7 +280,12 @@ class AuthServer:
         """启动 Antigravity Google OAuth 认证"""
         import secrets
         state = secrets.token_urlsafe(16)
-        callback_url = self._get_callback_url()
+        
+        # Google Native App 必须使用 Loopback IP 地址 (127.0.0.1 或 localhost)
+        # 即使在远程服务器上运行，生成的 URL 也必须指向 127.0.0.1
+        # 用户需要使用 SSH 隧道: ssh -L 8765:127.0.0.1:8765 user@remote
+        host_for_url = "127.0.0.1"
+        callback_url = f"http://{host_for_url}:{self.port}/callback"
 
         auth_url = self._build_google_auth_url(
             self.ANTIGRAVITY_CLIENT_ID,
@@ -227,6 +297,9 @@ class AuthServer:
         print("Antigravity OAuth 认证")
         print("="*60)
         print(f"\n回调服务器: {callback_url}")
+        print("\n⚠️  注意: Google 要求此应用的重定向地址必须是 127.0.0.1。")
+        print(f"    如果您在远程服务器上运行，请在本地机器上建立 SSH 隧道:")
+        print(f"    ssh -L {self.port}:127.0.0.1:{self.port} user@your-server-ip")
         print(f"\n请在浏览器中访问以下链接完成认证:\n")
         print(auth_url)
         print("\n" + "="*60)
@@ -235,7 +308,8 @@ class AuthServer:
         self._run_callback_server(
             "antigravity",
             self.ANTIGRAVITY_CLIENT_ID,
-            self.ANTIGRAVITY_CLIENT_SECRET
+            self.ANTIGRAVITY_CLIENT_SECRET,
+            redirect_uri=callback_url
         )
 
     def start_kiro_google_auth(self):
@@ -628,9 +702,9 @@ class AuthServer:
         print(f"  ℹ️  ProfileARN 缺失不影响额度查询功能")
         return None
 
-    def _run_callback_server(self, provider: str, client_id: str, client_secret: str):
+    def _run_callback_server(self, provider: str, client_id: str, client_secret: str, redirect_uri: Optional[str] = None):
         """运行 OAuth 回调服务器"""
-        handler = self._create_callback_handler(provider, client_id, client_secret)
+        handler = self._create_callback_handler(provider, client_id, client_secret, redirect_uri)
 
         with socketserver.TCPServer((self.host, self.port), handler) as httpd:
             httpd.timeout = 300  # 5 分钟超时

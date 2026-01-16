@@ -311,7 +311,13 @@ class ProxyManager:
             "host": "0.0.0.0",
             "auth-dir": str(self.auth_dir),
             "debug": False,
-            "routing": {"strategy": "round-robin"}
+            "routing": {"strategy": "round-robin"},
+            "providers": {
+                "antigravity": {
+                    "client_id": "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com",
+                    "client_secret": "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"
+                }
+            }
         }
 
     def list_models(self, provider: Optional[str] = None):
